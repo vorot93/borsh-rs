@@ -574,6 +574,56 @@ pub mod hashes {
     }
 }
 
+#[cfg(feature = "ethnum")]
+impl BorshDeserialize for ethnum::U256 {
+    fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+        <[u128; 2] as BorshDeserialize>::deserialize_reader(reader).map(Self)
+    }
+}
+
+#[cfg(feature = "ethereum-types")]
+mod ethereum_types_support {
+    use super::*;
+    use ethereum_types::*;
+
+    macro_rules! fixed_hash_impl {
+        ($name: ident, $len: expr) => {
+            impl BorshDeserialize for $name {
+                fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+                    let b = <[u8; $len] as BorshDeserialize>::deserialize_reader(reader)?;
+                    Ok(Self(b))
+                }
+            }
+        };
+    }
+
+    fixed_hash_impl!(H64, 8);
+    fixed_hash_impl!(H128, 16);
+    fixed_hash_impl!(H160, 20);
+    fixed_hash_impl!(H256, 32);
+    fixed_hash_impl!(H512, 64);
+    fixed_hash_impl!(H520, 65);
+
+    #[cfg(feature = "ethbloom")]
+    fixed_hash_impl!(Bloom, 256);
+
+    macro_rules! fixed_uint_impl {
+        ($name:ident, $len:expr) => {
+            impl BorshDeserialize for $name {
+                fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+                    let b = <[u8; $len * 8] as BorshDeserialize>::deserialize_reader(reader)?;
+                    Ok($name::from_big_endian(&b))
+                }
+            }
+        };
+    }
+
+    fixed_uint_impl!(U64, 1);
+    fixed_uint_impl!(U128, 2);
+    fixed_uint_impl!(U256, 4);
+    fixed_uint_impl!(U512, 8);
+}
+
 impl<T> BorshDeserialize for BTreeSet<T>
 where
     T: BorshDeserialize + Ord,

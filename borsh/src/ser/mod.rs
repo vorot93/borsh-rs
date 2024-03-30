@@ -413,6 +413,53 @@ pub mod hashes {
     }
 }
 
+#[cfg(feature = "ethnum")]
+impl BorshSerialize for ethnum::U256 {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        BorshSerialize::serialize(&self.0, writer)
+    }
+}
+
+#[cfg(feature = "ethereum-types")]
+mod ethereum_types_support {
+    use super::*;
+    use ethereum_types::*;
+
+    macro_rules! fixed_hash_impl {
+        ($name:ty) => {
+            impl BorshSerialize for $name {
+                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                    BorshSerialize::serialize(&self.0, writer)
+                }
+            }
+        };
+    }
+
+    fixed_hash_impl!(H64);
+    fixed_hash_impl!(H128);
+    fixed_hash_impl!(H160);
+    fixed_hash_impl!(H256);
+    fixed_hash_impl!(H512);
+    fixed_hash_impl!(H520);
+    #[cfg(feature = "ethbloom")]
+    fixed_hash_impl!(Bloom);
+
+    macro_rules! fixed_uint_impl {
+        ($t: ident) => {
+            impl BorshSerialize for $t {
+                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                    BorshSerialize::serialize(&self.to_big_endian(), writer)
+                }
+            }
+        };
+    }
+
+    fixed_uint_impl!(U64);
+    fixed_uint_impl!(U128);
+    fixed_uint_impl!(U256);
+    fixed_uint_impl!(U512);
+}
+
 impl<K, V> BorshSerialize for BTreeMap<K, V>
 where
     K: BorshSerialize,
